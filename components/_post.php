@@ -2,7 +2,7 @@
 $postPk         = htmlspecialchars($post["post_pk"]);
 $commentTarget  = htmlspecialchars($post["comment_target_pk"] ?? $post["post_pk"]);
 ?>
-<article class="post" id="post-<?php echo $commentTarget; ?>" data-post-pk="<?php echo $postPk; ?>" data-comment-target="<?php echo $commentTarget; ?>">
+<article class="post" id="post-<?php echo $commentTarget; ?>" data-post-pk="<?php echo $postPk; ?>" data-repost-pk="<?php echo $post['repost_pk'] ?? ''; ?>" data-comment-target="<?php echo $commentTarget; ?>">
 
     <div class="post-content">
         <?php if (!empty($post["reposted_by"])): ?>
@@ -96,7 +96,7 @@ $commentTarget  = htmlspecialchars($post["comment_target_pk"] ?? $post["post_pk"
                 <i id="retweet_<?php echo htmlspecialchars($post["post_pk"]); ?>" class="fa-solid fa-retweet"></i>
                 <span class="repost-count"><?php echo $post['repost_count'] ?? 0; ?></span>
             </span>
-            <span class="action flip-btn" data-post-pk="<?php echo htmlspecialchars($post["post_pk"]); ?>">
+            <span class="action flip-btn" data-post-pk="<?php echo htmlspecialchars($post["post_pk"]); ?>" data-comment-target="<?php echo $commentTarget; ?>">
                 <i id="like_<?php echo htmlspecialchars($post["post_pk"]); ?>" class="<?php echo $post['is_liked_by_user'] ? 'fa-solid' : 'fa-regular'; ?> fa-heart"></i>
                 <span class="like-count"><?php echo $post['like_count'] ?? 0; ?></span>
             </span>

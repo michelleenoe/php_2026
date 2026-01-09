@@ -20,7 +20,11 @@ class UnlikeApi extends BaseApiController {
 
         try {
             $likeService = new LikeService();
-            $likeService->unlike($user['user_pk'], $postPk);
+            
+            // Determine if the target is a post or repost
+            $targetInfo = $likeService->getTargetPkAndType($postPk);
+            $likeService->unlike($user['user_pk'], $targetInfo['pk'], $targetInfo['type']);
+            
             $this->json(['success' => true]);
             return;
         } catch (Exception $e) {
