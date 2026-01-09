@@ -2,7 +2,7 @@
 $postPk         = htmlspecialchars($post["post_pk"]);
 $commentTarget  = htmlspecialchars($post["comment_target_pk"] ?? $post["post_pk"]);
 ?>
-<article class="post" id="post-<?php echo $commentTarget; ?>" data-post-pk="<?php echo $postPk; ?>" data-comment-target="<?php echo $commentTarget; ?>">
+<article class="post" id="post-<?php echo $commentTarget; ?>" data-post-pk="<?php echo $postPk; ?>" data-repost-pk="<?php echo $post['repost_pk'] ?? ''; ?>" data-comment-target="<?php echo $commentTarget; ?>">
 
     <div class="post-content">
         <?php if (!empty($post["reposted_by"])): ?>
