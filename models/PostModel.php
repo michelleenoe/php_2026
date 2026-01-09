@@ -85,7 +85,7 @@ class PostModel {
                     p.post_pk AS root_post_pk,
                     r.created_at AS display_created_at
                 FROM reposts r
-                JOIN posts p ON p.post_pk = r.repost_post_fk AND p.deleted_at IS NULL
+                JOIN posts p ON p.post_pk = COALESCE(r.repost_post_pk, r.repost_like_pk, r.repost_comment_pk) AND p.deleted_at IS NULL
                 JOIN users u ON u.user_pk = p.post_user_fk AND u.deleted_at IS NULL
                 JOIN users ur ON ur.user_pk = r.repost_user_fk AND ur.deleted_at IS NULL
             ) feed
@@ -218,7 +218,7 @@ class PostModel {
                     p.post_pk AS root_post_pk,
                     r.created_at AS display_created_at
                 FROM reposts r
-                JOIN posts p ON p.post_pk = r.repost_post_fk AND p.deleted_at IS NULL
+                JOIN posts p ON p.post_pk = COALESCE(r.repost_post_pk, r.repost_like_pk, r.repost_comment_pk) AND p.deleted_at IS NULL
                 JOIN users u ON u.user_pk = p.post_user_fk AND u.deleted_at IS NULL
                 JOIN users ur ON ur.user_pk = r.repost_user_fk AND ur.deleted_at IS NULL
                 WHERE p.post_message REGEXP :pattern
@@ -384,7 +384,7 @@ class PostModel {
                     p.post_pk AS root_post_pk,
                     r.created_at AS display_created_at
                 FROM reposts r
-                JOIN posts p ON p.post_pk = r.repost_post_fk AND p.deleted_at IS NULL
+                JOIN posts p ON p.post_pk = COALESCE(r.repost_post_pk, r.repost_like_pk, r.repost_comment_pk) AND p.deleted_at IS NULL
                 JOIN users u ON u.user_pk = p.post_user_fk AND u.deleted_at IS NULL
                 JOIN users ur ON ur.user_pk = r.repost_user_fk AND ur.deleted_at IS NULL
                 WHERE r.repost_user_fk = :user
@@ -490,7 +490,7 @@ class PostModel {
             $post["like_count"] = (int) $stmt->fetchColumn();
 
             if ($this->ensureRepostsAvailable()) {
-                $stmt = $_db->prepare("SELECT COUNT(*) FROM reposts WHERE repost_post_fk = :id");
+                $stmt = $_db->prepare("SELECT COUNT(*) FROM reposts WHERE :id IN (repost_post_pk, repost_like_pk, repost_comment_pk)");
                 $stmt->bindValue(":id", $post["post_pk"]);
                 $stmt->execute();
                 $post["repost_count"] = (int) $stmt->fetchColumn();
@@ -513,7 +513,7 @@ class PostModel {
                     $stmt = $_db->prepare("
                         SELECT COUNT(*) 
                         FROM reposts 
-                        WHERE repost_post_fk = :post AND repost_user_fk = :user
+                        WHERE :post IN (repost_post_pk, repost_like_pk, repost_comment_pk) AND repost_user_fk = :user
                     ");
                     $stmt->bindValue(":post", $post["post_pk"]);
                     $stmt->bindValue(":user", $currentUserPk);

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Ignorer composer- og npm-afhængigheder
 vendor/
 node_modules/
@@ -61,3 +62,27 @@ public/uploads/avatars/
 public/uploads/posts/
 
 public/uploads/covers/
+=======
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+
+# Dependencies
+venv/
+.venv/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+```
+>>>>>>> 3665e3313226b7a0d1c76f649f22ae32de6eed39
