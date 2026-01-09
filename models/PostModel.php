@@ -473,25 +473,31 @@ class PostModel {
             $commentCount = 0;
             $commentTargets = array_unique(array_filter([$commentTargetPk, $rootPostPk]));
             foreach ($commentTargets as $target) {
+                // Get the original post PK if this is a repost
+                $originalPostPk = $this->getOriginalPostPk($target);
                 $stmt = $_db->prepare(
                     "SELECT COUNT(*) FROM comments WHERE comment_post_fk = :id AND deleted_at IS NULL"
                 );
-                $stmt->bindValue(":id", $target);
+                $stmt->bindValue(":id", $originalPostPk);
                 $stmt->execute();
                 $commentCount += (int) $stmt->fetchColumn();
             }
             $post["comment_count"] = $commentCount;
 
+            // Get the original post PK for likes
+            $originalPostPkForLikes = $this->getOriginalPostPk($post["post_pk"]);
             $stmt = $_db->prepare(
                 "SELECT COUNT(*) FROM likes l JOIN users u ON l.like_user_fk = u.user_pk WHERE l.like_post_fk = :id AND u.deleted_at IS NULL"
             );
-            $stmt->bindValue(":id", $post["post_pk"]);
+            $stmt->bindValue(":id", $originalPostPkForLikes);
             $stmt->execute();
             $post["like_count"] = (int) $stmt->fetchColumn();
 
             if ($this->ensureRepostsAvailable()) {
+                // Count reposts for the original post
+                $originalPostPkForReposts = $this->getOriginalPostPk($post["post_pk"]);
                 $stmt = $_db->prepare("SELECT COUNT(*) FROM reposts WHERE :id IN (repost_post_pk, repost_like_pk, repost_comment_pk)");
-                $stmt->bindValue(":id", $post["post_pk"]);
+                $stmt->bindValue(":id", $originalPostPkForReposts);
                 $stmt->execute();
                 $post["repost_count"] = (int) $stmt->fetchColumn();
             } else {
@@ -499,12 +505,14 @@ class PostModel {
             }
 
             if ($currentUserPk) {
+                // Get the original post PK for user-specific checks
+                $originalPostPkForUserChecks = $this->getOriginalPostPk($post["post_pk"]);
                 $stmt = $_db->prepare("
                     SELECT COUNT(*) 
                     FROM likes 
                     WHERE like_post_fk = :post AND like_user_fk = :user
                 ");
-                $stmt->bindValue(":post", $post["post_pk"]);
+                $stmt->bindValue(":post", $originalPostPkForUserChecks);
                 $stmt->bindValue(":user", $currentUserPk);
                 $stmt->execute();
                 $post["is_liked_by_user"] = $stmt->fetchColumn() > 0;
@@ -515,7 +523,7 @@ class PostModel {
                         FROM reposts 
                         WHERE :post IN (repost_post_pk, repost_like_pk, repost_comment_pk) AND repost_user_fk = :user
                     ");
-                    $stmt->bindValue(":post", $post["post_pk"]);
+                    $stmt->bindValue(":post", $originalPostPkForUserChecks);
                     $stmt->bindValue(":user", $currentUserPk);
                     $stmt->execute();
                     $post["is_reposted_by_user"] = $stmt->fetchColumn() > 0;
@@ -529,6 +537,28 @@ class PostModel {
         }
 
         return $posts;
+    }
+    
+    private function getOriginalPostPk($targetPk) {
+        $this->ensureDb();
+        global $_db;
+        
+        // If this is a repost, get the original post
+        $stmt = $_db->prepare("
+            SELECT COALESCE(repost_post_pk, repost_like_pk, repost_comment_pk) as original_pk
+            FROM reposts 
+            WHERE repost_pk = :targetPk
+        ");
+        $stmt->bindValue(':targetPk', $targetPk);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result && !empty($result['original_pk'])) {
+            return $result['original_pk'];
+        }
+        
+        // If not a repost, return the original target
+        return $targetPk;
     }
 
     private function normalizeUser($currentUserPk = null) {

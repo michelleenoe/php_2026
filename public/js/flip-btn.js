@@ -6,6 +6,7 @@ export function flipBtn(root = document) {
     btn.addEventListener("click", function () {
       const heartIcon = this.querySelector("i");
       const postPk = this.getAttribute("data-post-pk");
+      const originalPostPk = this.getAttribute("data-original-post-pk") || postPk; // Use original post PK if available
       const likeCountSpan = this.querySelector(".like-count");
       if (!postPk) {
         if (typeof showToast === "function") showToast("Missing post id");
@@ -15,7 +16,7 @@ export function flipBtn(root = document) {
 
       const url = isLiked ? `/api-unlike-post` : `/api-like-post`;
       const body = new URLSearchParams();
-      body.set("post_pk", postPk);
+      body.set("post_pk", originalPostPk); // Use original post PK for the action
 
       fetch(url, {
         method: "POST",

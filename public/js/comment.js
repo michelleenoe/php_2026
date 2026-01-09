@@ -187,8 +187,9 @@ function bindCommentButtons(root = document) {
 
     btn.addEventListener("click", () => {
       const postPk = btn.getAttribute("data-post-pk");
+      const originalPostPk = btn.getAttribute("data-original-post-pk") || postPk; // Use original post PK if available
       const commentTarget =
-        btn.getAttribute("data-comment-target") || postPk;
+        btn.getAttribute("data-comment-target") || originalPostPk; // Use original post for comments too
       const userPk = btn.getAttribute("data-user-pk");
       const postElement = btn.closest(".post");
       const dialog =

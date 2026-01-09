@@ -79,6 +79,9 @@ class CommentService {
     public function getCommentsByPost(string $postPk): array {
         $db = $this->db();
 
+        // Get the original post PK if this is a repost
+        $originalPostPk = $this->getOriginalPostPk($postPk);
+
         $sql = "
             SELECT
                 comments.comment_pk,
@@ -98,7 +101,7 @@ class CommentService {
         ";
 
         $stmt = $db->prepare($sql);
-        $stmt->bindValue(':postPk', $postPk);
+        $stmt->bindValue(':postPk', $originalPostPk);
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -107,14 +110,10 @@ class CommentService {
     public function getCommentsWithOriginal(string $targetPk): array {
         $db = $this->db();
 
-        $postPks = [$targetPk];
-        $lookup = $db->prepare("SELECT repost_post_fk FROM reposts WHERE repost_pk = :pk LIMIT 1");
-        $lookup->bindValue(':pk', $targetPk);
-        $lookup->execute();
-        $original = $lookup->fetchColumn();
-        if ($original) {
-            $postPks[] = $original;
-        }
+        // Get the original post PK if this is a repost
+        $originalPostPk = $this->getOriginalPostPk($targetPk);
+        
+        $postPks = [$originalPostPk];
 
         $postPks = array_values(array_unique(array_filter($postPks)));
         if (!$postPks) return [];
@@ -146,5 +145,26 @@ class CommentService {
         $stmt->execute();
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    private function getOriginalPostPk($targetPk) {
+        $db = $this->db();
+        
+        // If this is a repost, get the original post
+        $stmt = $db->prepare("
+            SELECT COALESCE(repost_post_pk, repost_like_pk, repost_comment_pk) as original_pk
+            FROM reposts 
+            WHERE repost_pk = :targetPk
+        ");
+        $stmt->bindValue(':targetPk', $targetPk);
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result && !empty($result['original_pk'])) {
+            return $result['original_pk'];
+        }
+        
+        // If not a repost, return the original target
+        return $targetPk;
     }
 }
