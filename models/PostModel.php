@@ -473,8 +473,9 @@ class PostModel {
             $commentCount = 0;
             $commentTargets = array_unique(array_filter([$commentTargetPk, $rootPostPk]));
             foreach ($commentTargets as $target) {
+                // Count comments for both post and repost targets
                 $stmt = $_db->prepare(
-                    "SELECT COUNT(*) FROM comments WHERE comment_post_fk = :id AND deleted_at IS NULL"
+                    "SELECT COUNT(*) FROM comments WHERE ((comment_post_fk = :id AND comment_target_type = 'post') OR (comment_repost_fk = :id AND comment_target_type = 'repost')) AND deleted_at IS NULL"
                 );
                 $stmt->bindValue(":id", $target);
                 $stmt->execute();
@@ -483,13 +484,14 @@ class PostModel {
             $post["comment_count"] = $commentCount;
 
             $stmt = $_db->prepare(
-                "SELECT COUNT(*) FROM likes l JOIN users u ON l.like_user_fk = u.user_pk WHERE l.like_post_fk = :id AND u.deleted_at IS NULL"
+                "SELECT COUNT(*) FROM likes WHERE ((like_post_fk = :id AND like_target_type = 'post') OR (like_repost_fk = :id AND like_target_type = 'repost'))"
             );
             $stmt->bindValue(":id", $post["post_pk"]);
             $stmt->execute();
             $post["like_count"] = (int) $stmt->fetchColumn();
 
             if ($this->ensureRepostsAvailable()) {
+                // Calculate reposts for this specific post/repost
                 $stmt = $_db->prepare("SELECT COUNT(*) FROM reposts WHERE :id IN (repost_post_pk, repost_like_pk, repost_comment_pk)");
                 $stmt->bindValue(":id", $post["post_pk"]);
                 $stmt->execute();
@@ -502,7 +504,7 @@ class PostModel {
                 $stmt = $_db->prepare("
                     SELECT COUNT(*) 
                     FROM likes 
-                    WHERE like_post_fk = :post AND like_user_fk = :user
+                    WHERE ((like_post_fk = :post AND like_target_type = 'post') OR (like_repost_fk = :post AND like_target_type = 'repost')) AND like_user_fk = :user
                 ");
                 $stmt->bindValue(":post", $post["post_pk"]);
                 $stmt->bindValue(":user", $currentUserPk);
